@@ -50,25 +50,44 @@ function drawGearInfo(dc) {
     var MARGIN = 8;                      // Margin around the edges
     var ROW_SPACING = 5;                 // Vertical spacing between rows
     
-    // Device-specific offsets
-    var deviceOffset = 0;
-    
-    // Detect device and apply appropriate offset
-    var deviceType = System.getDeviceSettings().partNumber;
-    if (deviceType != null) {
-        if (deviceType.find("1050") != null) {
-            deviceOffset = 6;  // Edge 1050 needs +6 offset
-        } else if (deviceType.find("540") != null) {
-            deviceOffset = 3;  // Edge 540 needs +3 offset
-        } else {
-            deviceOffset = 6;
-        }
-        // Add more device-specific offsets as needed
-    }
-    
     // Get display dimensions
     var width = dc.getWidth();
     var height = dc.getHeight();
+
+    // Detect screen shape so we can keep content off the bezel on
+    // round watches while preserving the Edge (rectangular) layout.
+    var settings = System.getDeviceSettings();
+    var isRound = false;
+    if (settings has :screenShape && settings.screenShape != null) {
+        isRound = (settings.screenShape != System.SCREEN_SHAPE_RECTANGLE);
+    }
+
+    // Horizontal margin: rectangular Edge devices keep the tight margin,
+    // round watches need extra inset so the gear rows are not clipped.
+    var sideMargin = MARGIN;
+    if (isRound) {
+        sideMargin = (width * 0.15).toNumber();
+        if (sideMargin < MARGIN) {
+            sideMargin = MARGIN;
+        }
+    }
+
+    // Device-specific horizontal offset for the front (top) row.
+    // Only meaningful for the right-aligned Edge layout.
+    var deviceOffset = 0;
+    if (!isRound) {
+        var deviceType = settings.partNumber;
+        if (deviceType != null) {
+            if (deviceType.find("1050") != null) {
+                deviceOffset = 6;  // Edge 1050 needs +6 offset
+            } else if (deviceType.find("540") != null) {
+                deviceOffset = 3;  // Edge 540 needs +3 offset
+            } else {
+                deviceOffset = 6;
+            }
+            // Add more device-specific offsets as needed
+        }
+    }
 
     // Scale gear rectangles so the two rows plus the ratio text
     // fill the full height of the data field
@@ -132,8 +151,8 @@ function drawGearInfo(dc) {
         rearGearSize = 15;  // Common cog size
     }
     
-    // Calculate usable width accounting for margins
-    var usableWidth = width - (2 * MARGIN);
+    // Calculate usable width accounting for horizontal margins
+    var usableWidth = width - (2 * sideMargin);
     
     // Calculate rectangle width for rear gears (base calculation)
     var rearRectWidth = (usableWidth - (RECT_SPACING * (rearGearMax - 1))) / rearGearMax;
@@ -144,7 +163,7 @@ function drawGearInfo(dc) {
     // ----- Draw Rear Gears (bottom row, full width) -----
     // Draw rear gear rectangles - full width with margins
     for (var i = 0; i < rearGearMax; i++) {
-        var x = MARGIN + i * (rearRectWidth + RECT_SPACING);
+        var x = sideMargin + i * (rearRectWidth + RECT_SPACING);
         var y = MARGIN + rectHeight + ROW_SPACING;
         
         // Selected gear gets filled, others get border only
@@ -163,8 +182,14 @@ function drawGearInfo(dc) {
     // Calculate the total width that will be used by front gear rectangles
     var frontTotalWidth = (frontGearMax * frontRectWidth) + ((frontGearMax - 1) * RECT_SPACING);
     
-    // Calculate starting X to center the front gear row with device-specific offset
-    var frontStartX = width - MARGIN - frontTotalWidth - deviceOffset;
+    // Round watches: center the front row so it stays inside the bezel.
+    // Rectangular Edge devices: keep the right-aligned layout with offset.
+    var frontStartX;
+    if (isRound) {
+        frontStartX = (width - frontTotalWidth) / 2;
+    } else {
+        frontStartX = width - sideMargin - frontTotalWidth - deviceOffset;
+    }
     
     // Draw front gear rectangles
     for (var i = 0; i < frontGearMax; i++) {
