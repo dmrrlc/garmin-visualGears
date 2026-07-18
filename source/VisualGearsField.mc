@@ -44,11 +44,11 @@ class VisualGearsField extends WatchUi.DataField {
 function drawGearInfo(dc) {
     // Constants for display settings
     var DEBUG = false;                   // Set debug information to false
-    var RECT_HEIGHT = 30;                // Height of gear rectangles
     var RECT_SPACING = 4;                // Spacing between rectangles
     var RECT_BORDER = 2;                 // Border thickness
     var TEXT_HEIGHT = 15;                // Height for debug text
     var MARGIN = 8;                      // Margin around the edges
+    var ROW_SPACING = 5;                 // Vertical spacing between rows
     
     // Device-specific offsets
     var deviceOffset = 0;
@@ -69,6 +69,14 @@ function drawGearInfo(dc) {
     // Get display dimensions
     var width = dc.getWidth();
     var height = dc.getHeight();
+
+    // Scale gear rectangles so the two rows plus the ratio text
+    // fill the full height of the data field
+    var ratioTextHeight = dc.getFontHeight(Graphics.FONT_MEDIUM);
+    var rectHeight = (height - (2 * MARGIN) - ratioTextHeight - (2 * ROW_SPACING)) / 2;
+    if (rectHeight < 10) {
+        rectHeight = 10;  // Keep rectangles visible on very short fields
+    }
     
     // Set colors - updated for white background and black rectangles
     var colorBackground = Graphics.COLOR_WHITE;
@@ -137,17 +145,17 @@ function drawGearInfo(dc) {
     // Draw rear gear rectangles - full width with margins
     for (var i = 0; i < rearGearMax; i++) {
         var x = MARGIN + i * (rearRectWidth + RECT_SPACING);
-        var y = MARGIN + RECT_HEIGHT + 5;
+        var y = MARGIN + rectHeight + ROW_SPACING;
         
         // Selected gear gets filled, others get border only
         if (i + 1 == rearGearIndex) {  // +1 because indexes are 1-based
             // Draw selected gear (filled rectangle)
             dc.setColor(colorSelected, colorBackground);
-            dc.fillRectangle(x, y, rearRectWidth, RECT_HEIGHT);
+            dc.fillRectangle(x, y, rearRectWidth, rectHeight);
         } else {
             // Draw unselected gear (border only)
             dc.setColor(colorBorder, colorBackground);
-            dc.drawRectangle(x, y, rearRectWidth, RECT_HEIGHT);
+            dc.drawRectangle(x, y, rearRectWidth, rectHeight);
         }
     }
     
@@ -167,17 +175,17 @@ function drawGearInfo(dc) {
         if (i + 1 == frontGearIndex) {  // +1 because indexes are 1-based
             // Draw selected gear (filled rectangle)
             dc.setColor(colorSelected, colorBackground);
-            dc.fillRectangle(x, y, frontRectWidth, RECT_HEIGHT);
+            dc.fillRectangle(x, y, frontRectWidth, rectHeight);
         } else {
             // Draw unselected gear (border only)
             dc.setColor(colorBorder, colorBackground);
-            dc.drawRectangle(x, y, frontRectWidth, RECT_HEIGHT);
+            dc.drawRectangle(x, y, frontRectWidth, rectHeight);
         }
     }
     
     // ----- Draw Gear Ratio Text -----
-    // Position for gear ratio text (below the rectangles)
-    var ratioY = MARGIN + 2 * (RECT_HEIGHT + 5) + 5;
+    // Position for gear ratio text (below the rectangles, anchored to the bottom)
+    var ratioY = height - MARGIN - ratioTextHeight;
     
     // Draw gear ratio text
     dc.setColor(colorText, colorBackground);
